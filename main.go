@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -188,6 +189,12 @@ func assert(err error) {
 }
 
 func getJson(urAL *url.URL, jsn interface{}) error {
+	log.WithFields(log.Fields{
+		"method":  "GET",
+		"url":     urAL,
+		"headers": map[string]interface{}{"Private-Token": "***"},
+	}).Info("performing HTTP request")
+
 	res, errReq := client.Do(&http.Request{Method: "GET", URL: urAL, Header: map[string][]string{"Private-Token": {token}}})
 	if errReq != nil {
 		return errReq
@@ -195,10 +202,21 @@ func getJson(urAL *url.URL, jsn interface{}) error {
 
 	defer res.Body.Close()
 
+	if res.StatusCode > 299 {
+		return fmt.Errorf("got HTTP status %d", res.StatusCode)
+	}
+
 	body, errRA := ioutil.ReadAll(res.Body)
 	if errRA != nil {
 		return errRA
 	}
+
+	log.WithFields(log.Fields{
+		"method":          "GET",
+		"url":             urAL,
+		"request_headers": map[string]interface{}{"Private-Token": "***"},
+		"body":            string(body),
+	}).Info("got HTTP response")
 
 	return json.Unmarshal(body, jsn)
 }
